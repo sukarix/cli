@@ -391,7 +391,7 @@ run() {
 
   # Environment
   HOST_TESTER=$(hostname)
-  if [[ "$HOST_TESTER" == "sukarix" ]]; then
+  if [[ "$HOST_TESTER" == "sukarix.test" ]]; then
     ENVIRONMENT="development"
   else
     ENVIRONMENT="production"

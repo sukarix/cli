@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Author(s):
-#       Ghazi Triki <ghazi.triki@riadvice.tn>
+#       Ghazi Triki <ghazi.triki@riadvice.com>
 #
 # Changelog:
 #   2024-06-17 GTR Initial Version

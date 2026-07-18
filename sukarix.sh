@@ -353,7 +353,7 @@ start_services() {
   sudo service postgresql start
   sudo service redis-server start
   sudo service nginx start
-  sudo service php8.3-fpm start
+  sudo service php8.5-fpm start
 }
 
 #
@@ -363,7 +363,7 @@ stop_services() {
   sudo service postgresql stop
   sudo service redis-server stop
   sudo service nginx stop
-  sudo service php8.3-fpm stop
+  sudo service php8.5-fpm stop
 }
 
 #
@@ -373,14 +373,14 @@ restart_services() {
   sudo service postgresql restart
   sudo service redis-server restart
   sudo service nginx restart
-  sudo service php8.3-fpm restart
+  sudo service php8.5-fpm restart
 }
 
 reload_services() {
   sudo service postgresql reload
   sudo service redis-server force-reload
   sudo service nginx reload
-  sudo service php8.3-fpm reload
+  sudo service php8.5-fpm reload
 }
 
 run() {

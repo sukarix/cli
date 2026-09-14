@@ -27,6 +27,9 @@ GIT_BRANCH=$(git --git-dir="$BASEDIR/../.git" branch | sed -n '/\* /s///p')
 # Git tag, commits ahead & commit id under format '0.4-160-g3bb256c'
 GIT_VERSION=$(git --git-dir="$BASEDIR/../.git" describe --tags --always HEAD)
 
+# PHP-FPM service for the PHP version on PATH, e.g. php8.5-fpm
+PHP_FPM_SERVICE="php$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')-fpm"
+
 #
 # Display usage
 #
@@ -34,9 +37,11 @@ usage() {
   echo
   echo "#========================================================================================================"
   echo "#"
-  echo "# Sukarix Configuration Utility for the Sukarix PHP Frameowk - Version $GIT_VERSION on $GIT_BRANCH branch"
+  echo "# Sukarix Configuration Utility for the Sukarix PHP Framework - Version $GIT_VERSION on $GIT_BRANCH branch"
   echo "#"
   echo "#    sukarix [options]"
+  echo "#"
+  echo "# Environment is read from APP_ENV (development|staging|production); a *.test hostname means development."
   echo "#"
   echo "# Configuration:"
   echo "#    --version                        Display Sukarix application version"
@@ -44,7 +49,7 @@ usage() {
   echo "#"
   echo "# Development:"
   echo "#    --enabletests                    Enable running unit tests"
-  echo "#    --test <-c> <name>               Run unit tests with a test name. Use for -c coverage"
+  echo "#    --test [-c] [name]               Run unit tests, optionally one group; -c adds code coverage"
   echo "#    --fix                            Fix php code style"
   echo "#    --migrate                        Run database migrations"
   echo "#    --metrics                        Generates code metrics"
@@ -55,7 +60,6 @@ usage() {
   echo "# Administration:"
   echo "#    --pull                           Pull source code from its repository"
   echo "#    --deploy                         Deploy the application on a production server"
-  echo "#    --build-docs                     Build the documentation"
   echo "#    --jobs                           Install the cron jobs"
   echo "#    --restart                        Restart Sukarix Stack"
   echo "#    --stop                           Stop Sukarix Stack"
@@ -159,8 +163,9 @@ clean_logs() {
 # Clean sessions from the database
 #
 clean_sessions() {
-  sudo -u postgres psql -d sukarix -c "SELECT setval('users_sessions_id_seq'::regclass, 1);"
-  sudo -u postgres psql -d sukarix -c "TRUNCATE users_sessions;"
+  echo "► Cleaning sessions"
+  # Goes through the framework's own CLI action, so it works whatever table or database the application uses
+  cd "$APP_DIR/public" && php index.php "/cli/sessions/clean"
 }
 
 #
@@ -353,7 +358,7 @@ start_services() {
   sudo service postgresql start
   sudo service redis-server start
   sudo service nginx start
-  sudo service php8.5-fpm start
+  sudo service "$PHP_FPM_SERVICE" start
 }
 
 #
@@ -363,7 +368,7 @@ stop_services() {
   sudo service postgresql stop
   sudo service redis-server stop
   sudo service nginx stop
-  sudo service php8.5-fpm stop
+  sudo service "$PHP_FPM_SERVICE" stop
 }
 
 #
@@ -373,14 +378,14 @@ restart_services() {
   sudo service postgresql restart
   sudo service redis-server restart
   sudo service nginx restart
-  sudo service php8.5-fpm restart
+  sudo service "$PHP_FPM_SERVICE" restart
 }
 
 reload_services() {
   sudo service postgresql reload
   sudo service redis-server force-reload
   sudo service nginx reload
-  sudo service php8.5-fpm reload
+  sudo service "$PHP_FPM_SERVICE" reload
 }
 
 run() {
@@ -389,13 +394,19 @@ run() {
     exit 1
   fi
 
-  # Environment
-  HOST_TESTER=$(hostname)
-  if [[ "$HOST_TESTER" == "sukarix.test" ]]; then
-    ENVIRONMENT="development"
-  else
-    ENVIRONMENT="production"
-  fi
+  # Environment: same rules as Sukarix\Application\Boot::detectEnvironment()
+  case "${APP_ENV:-}" in
+    development|staging|production)
+      ENVIRONMENT="$APP_ENV"
+      ;;
+    *)
+      if [[ "$(hostname)" == *.test ]]; then
+        ENVIRONMENT="development"
+      else
+        ENVIRONMENT="production"
+      fi
+      ;;
+  esac
 
   echo "► Detected environment: \`$ENVIRONMENT\`"
 
@@ -467,12 +478,6 @@ run() {
 
     if [ "$1" = "--pull" -o "$1" = "-pull" -o "$1" = "-p" ]; then
       update_source_code
-      shift
-      continue
-    fi
-
-    if [ "$1" = "--install" -o "$1" = "-install" -o "$1" = "-i" ]; then
-      install_server
       shift
       continue
     fi
